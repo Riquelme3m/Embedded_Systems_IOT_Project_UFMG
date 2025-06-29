@@ -20,7 +20,7 @@ QueueHandle_t servoQueue = NULL;
 // External variables from mqtt_handler
 extern float temperatureThreshold;
 
-// Sensor Task - Reads temperature and humidity every 5 seconds
+// Task: Read temperature and humidity periodically
 void sensorTask(void *parameter) {
   TickType_t xLastWakeTime = xTaskGetTickCount();
   const TickType_t xFrequency = pdMS_TO_TICKS(2000); 
@@ -28,19 +28,16 @@ void sensorTask(void *parameter) {
   for (;;) {
     float temp = readTemperature();
     float humidity = readHumidity();
-    
     if (!isnan(temp) && !isnan(humidity)) {
       // Update shared variables with semaphore protection
       if (xSemaphoreTake(temperatureSemaphore, portMAX_DELAY) == pdTRUE) {
         currentTemperature = temp;
         xSemaphoreGive(temperatureSemaphore);
       }
-      
       if (xSemaphoreTake(humiditySemaphore, portMAX_DELAY) == pdTRUE) {
         currentHumidity = humidity;
         xSemaphoreGive(humiditySemaphore);
       }
-      
       Serial.print("Sensor Task - Temperature: ");
       Serial.print(temp);
       Serial.print("°C, Humidity: ");
@@ -49,12 +46,11 @@ void sensorTask(void *parameter) {
     } else {
       Serial.println("Sensor Task - Failed to read from DHT sensor");
     }
-    
     vTaskDelayUntil(&xLastWakeTime, xFrequency);
   }
 }
 
-// MQTT Task - Handles MQTT connection and publishes sensor data
+// Task: Handle MQTT connection and publish sensor data
 void mqttTask(void *parameter) {
   TickType_t xLastWakeTime = xTaskGetTickCount();
   const TickType_t xFrequency = pdMS_TO_TICKS(2000); // 2 seconds
@@ -64,34 +60,28 @@ void mqttTask(void *parameter) {
       reconnectMQTT();
     }
     client.loop();
-    
-    // Publish sensor data
     float temp, humidity;
     if (xSemaphoreTake(temperatureSemaphore, pdMS_TO_TICKS(100)) == pdTRUE) {
       temp = currentTemperature;
       xSemaphoreGive(temperatureSemaphore);
-      
-      if (temp != 0.0) { // Only publish if we have valid data
+      if (temp != 0.0) {
         publishTemperatureSensorData(temp);
         Serial.println("MQTT Task - Published temperature data");
       }
     }
-    
     if (xSemaphoreTake(humiditySemaphore, pdMS_TO_TICKS(100)) == pdTRUE) {
       humidity = currentHumidity;
       xSemaphoreGive(humiditySemaphore);
-      
-      if (humidity != 0.0) { // Only publish if we have valid data
+      if (humidity != 0.0) {
         publishHumiditySensorData(humidity);
         Serial.println("MQTT Task - Published humidity data");
       }
     }
-    
     vTaskDelayUntil(&xLastWakeTime, xFrequency);
   }
 }
 
-// Alarm Task - Controls alarm LED based on temperature threshold
+// Task: Control alarm LED based on temperature threshold
 void alarmTask(void *parameter) {
   TickType_t xLastWakeTime = xTaskGetTickCount();
   const TickType_t xFrequency = pdMS_TO_TICKS(1000); // 1 second
@@ -101,7 +91,6 @@ void alarmTask(void *parameter) {
     if (xSemaphoreTake(temperatureSemaphore, pdMS_TO_TICKS(100)) == pdTRUE) {
       temp = currentTemperature;
       xSemaphoreGive(temperatureSemaphore);
-      
       if (temp > temperatureThreshold) {
         setAlarmLED(true);
         Serial.println("Alarm Task - Temperature alarm ON");
@@ -110,12 +99,11 @@ void alarmTask(void *parameter) {
         Serial.println("Alarm Task - Temperature alarm OFF");
       }
     }
-    
     vTaskDelayUntil(&xLastWakeTime, xFrequency);
   }
 }
 
-// Publish State Task - Publishes actuator states every 500ms
+// Task: Publish actuator states (alarm, servo) periodically
 void publishStateTask(void *parameter) {
   TickType_t xLastWakeTime = xTaskGetTickCount();
   const TickType_t xFrequency = pdMS_TO_TICKS(500); // 500ms
@@ -126,12 +114,11 @@ void publishStateTask(void *parameter) {
       publishServoMotorState();
       Serial.println("State Task - Published actuator states");
     }
-    
     vTaskDelayUntil(&xLastWakeTime, xFrequency);
   }
 }
 
-// Servo Task - Controls the servo motor based on target position
+// Task: Set servo position based on queue input
 void servoTask(void *parameter) {
   int newPosition;
   for (;;) {
@@ -144,9 +131,8 @@ void servoTask(void *parameter) {
   }
 }
 
-// Create all FreeRTOS tasks
+// Create all FreeRTOS tasks and synchronization primitives
 void createFreeRTOSTasks() {
-  // Create semaphores
   temperatureSemaphore = xSemaphoreCreateMutex();
   humiditySemaphore = xSemaphoreCreateMutex();
   servoQueue = xQueueCreate(5, sizeof(int));
@@ -156,55 +142,11 @@ void createFreeRTOSTasks() {
     return;
   }
   
-  // Create sensor task (Priority 2)
-  xTaskCreate(
-    sensorTask,
-    "SensorTask",
-    4096,
-    NULL,
-    2,
-    &sensorTaskHandle
-  );
-  
-  // Create MQTT task (Highest Priority 4)
-  xTaskCreate(
-    mqttTask,
-    "MQTTTask",
-    8192,
-    NULL,
-    4,
-    &mqttTaskHandle
-  );
-  
-  // Create alarm task (Priority 1)
-  xTaskCreate(
-    alarmTask,
-    "AlarmTask",
-    2048,
-    NULL,
-    1,
-    &alarmTaskHandle
-  );
-  
-  // Create publish state task (Priority 1)
-  xTaskCreate(
-    publishStateTask,
-    "PublishStateTask",
-    4096,
-    NULL,
-    1,
-    &publishStateTaskHandle
-  );
-
-  // Create servo task (Priority 2)
-  xTaskCreate(
-    servoTask,
-    "ServoTask",
-    2048,
-    NULL,
-    2,
-    &servoTaskHandle
-  );
+  xTaskCreate(sensorTask, "SensorTask", 4096, NULL, 2, &sensorTaskHandle);
+  xTaskCreate(mqttTask, "MQTTTask", 8192, NULL, 4, &mqttTaskHandle);
+  xTaskCreate(alarmTask, "AlarmTask", 2048, NULL, 1, &alarmTaskHandle);
+  xTaskCreate(publishStateTask, "PublishStateTask", 4096, NULL, 1, &publishStateTaskHandle);
+  xTaskCreate(servoTask, "ServoTask", 2048, NULL, 2, &servoTaskHandle);
   
   Serial.println("FreeRTOS tasks created successfully");
 }
