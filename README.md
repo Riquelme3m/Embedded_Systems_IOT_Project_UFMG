@@ -15,8 +15,8 @@ A real-time IoT automation system for monitoring and controlling environmental p
 - **Frontend UI:** Built with Node-RED Dashboard for real-time monitoring and control.
 
 **Architecture Diagram:**  
-*Add your architecture image here*  
-![System Architecture](docs/architecture.png)
+  
+![System Architecture](Architecture.png)
 
 ---
 
@@ -24,8 +24,8 @@ A real-time IoT automation system for monitoring and controlling environmental p
 
 The dashboard provides real-time visualization of sensor readings, actuator states, and user controls for the servo motor and alarm threshold.
 
-*Add your Node-RED dashboard screenshot here*  
-![Node-RED Dashboard](docs/dashboard.png)
+
+![Node-RED Dashboard](HMI_Screen.png)
 
 ---
 
@@ -109,27 +109,6 @@ platformio.ini
 
 ---
 
-## 📸 Screenshots
-
-### Architecture
-![System Architecture](architecture.png)
-
-### Node-RED Dashboard
-![Dashboard Screenshot](dashboard.png)
-
----
-
-## 🏫 Authors
-
-- Project developed for UFMG Embedded Systems/IoT course.
-
----
-
-## 📄 License
-
-MIT License (or your preferred license)
-
----
 
 ## MQTT Topics
 
@@ -159,9 +138,4 @@ Below are the MQTT topics used in this project:
 
 ---
 
-> **Note:**  
-> Place the images `architecture.png` and `dashboard.png` in the `docs/` folder inside your project directory.
----
 
-> **Note:**  
-> Place the images `architecture.png` and `dashboard.png` in the `docs/` folder inside your project directory.
