@@ -23,7 +23,7 @@ extern float temperatureThreshold;
 // Sensor Task - Reads temperature and humidity every 5 seconds
 void sensorTask(void *parameter) {
   TickType_t xLastWakeTime = xTaskGetTickCount();
-  const TickType_t xFrequency = pdMS_TO_TICKS(5000); // 5 seconds
+  const TickType_t xFrequency = pdMS_TO_TICKS(2000); 
   
   for (;;) {
     float temp = readTemperature();
@@ -57,7 +57,7 @@ void sensorTask(void *parameter) {
 // MQTT Task - Handles MQTT connection and publishes sensor data
 void mqttTask(void *parameter) {
   TickType_t xLastWakeTime = xTaskGetTickCount();
-  const TickType_t xFrequency = pdMS_TO_TICKS(5000); // 5 seconds
+  const TickType_t xFrequency = pdMS_TO_TICKS(2000); // 2 seconds
   
   for (;;) {
     if (!client.connected()) {

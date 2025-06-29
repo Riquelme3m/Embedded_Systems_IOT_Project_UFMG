@@ -46,6 +46,8 @@ bool getAlarmLEDState() {
   return digitalRead(alarmLED) == HIGH;
 }
 
+
+
 void setServoState(int angle) {
   Serial.print("Setting servo to: ");
   Serial.print(angle);

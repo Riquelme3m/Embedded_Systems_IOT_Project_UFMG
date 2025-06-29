@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "node-red-contrib-ui-led": "^0.4.11",
+    "node-red-dashboard": "^3.6.5"
+  }
+}

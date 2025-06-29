@@ -19,6 +19,7 @@ extern float temperatureThreshold;
 // Function declarations
 void setupMQTT();
 void reconnectMQTT();
+void publishSensorDataPeriodically();
 void publishInitialSensorInfo();
 void publishTemperatureSensorData(float temp);
 void publishHumiditySensorData(float humidity);

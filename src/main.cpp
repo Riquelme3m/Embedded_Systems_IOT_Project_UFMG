@@ -40,6 +40,14 @@ void setup() {
 }
 
 void loop() {
-  // Empty loop - FreeRTOS tasks handle everything
-  vTaskDelay(pdMS_TO_TICKS(1000));
+  // Only handle MQTT connection maintenance
+  if (!client.connected()) {
+    reconnectMQTT();
+  }
+  client.loop();  // Essential for MQTT to receive commands
+  
+  // Remove this line - let FreeRTOS tasks handle sensor publishing
+  // publishSensorDataPeriodically();  // ← REMOVE THIS
+  
+  vTaskDelay(pdMS_TO_TICKS(100));  // Short delay
 }

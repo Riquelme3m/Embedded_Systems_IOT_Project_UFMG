@@ -27,7 +27,7 @@ float temperatureThreshold = 30.0;
 bool initialInfoPublished = false;
 
 // Sensor intervals
-const unsigned long sensorInterval = 5000;
+const unsigned long sensorInterval = 1000;
 
 String getISO8601Timestamp() {
   struct tm timeinfo;
@@ -115,11 +115,54 @@ void publishServoMotorState() {
   client.publish("/states/ESP32_01/servo_motor_01", buffer, n);
 }
 
+// ...existing code...
+
+// Add this function after your existing functions
+void publishSensorDataPeriodically() {
+    static unsigned long lastSensorRead = 0;
+    unsigned long currentTime = millis();
+    
+    // Publish sensor data every 5 seconds
+    if (currentTime - lastSensorRead >= sensorInterval) {
+        if (client.connected()) {
+            // Read and publish temperature
+            float temp = readTemperature();
+            if (!isnan(temp)) {
+                publishTemperatureSensorData(temp);  // ← Your existing function
+                Serial.print("Published temperature: ");
+                Serial.println(temp);
+                
+                // Check temperature alarm
+                if (temp > temperatureThreshold) {
+                    setAlarmLED(true);
+                } else {
+                    setAlarmLED(false);
+                }
+                publishAlarmState();  // ← Your existing function
+            }
+            
+            // Read and publish humidity  
+            float humidity = readHumidity();
+            if (!isnan(humidity)) {
+                publishHumiditySensorData(humidity);  // ← Your existing function
+                Serial.print("Published humidity: ");
+                Serial.println(humidity);
+            }
+            
+            // Publish servo state
+            publishServoMotorState();  // ← Your existing function
+            
+            lastSensorRead = currentTime;
+        }
+    }
+}
+
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
   String message;
   for (unsigned int i = 0; i < length; i++) {
     message += (char)payload[i];
   }
+  
   Serial.print("Received on topic ");
   Serial.print(topic);
   Serial.print(": ");
@@ -129,27 +172,39 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     temperatureThreshold = message.toFloat();
     Serial.print("Updated temperature threshold to: ");
     Serial.println(temperatureThreshold);
-  } 
-  else if (strcmp(topic, "esp/servo_control") == 0) {
-    int newPosition = -1;
-    if (message.equalsIgnoreCase("ON")) {
-      Serial.println("MQTT: Received servo command ON");
-      newPosition = 180;
-    } 
-    else if (message.equalsIgnoreCase("OFF")) {
-      Serial.println("MQTT: Received servo command OFF");
-      newPosition = 0;
-    }
-
-    if (newPosition != -1) {
-      if (xQueueSend(servoQueue, &newPosition, portMAX_DELAY) != pdPASS) {
-        Serial.println("Failed to send to servo queue");
-      } else {
-        Serial.print("MQTT: Sent position to servo queue: ");
-        Serial.println(newPosition);
+    
+    // IMMEDIATELY check current temperature and update alarm
+    if (xSemaphoreTake(temperatureSemaphore, pdMS_TO_TICKS(100)) == pdTRUE) {
+      float currentTemp = currentTemperature;
+      xSemaphoreGive(temperatureSemaphore);
+      
+      if (currentTemp != 0.0) {  // Make sure we have valid data
+        if (currentTemp > temperatureThreshold) {
+          setAlarmLED(true);
+          Serial.println("Callback - Alarm turned ON immediately");
+        } else {
+          setAlarmLED(false);
+          Serial.println("Callback - Alarm turned OFF immediately");
+        }
+        // The publishStateTask will publish the new state within 500ms
       }
     }
   }
+
+ if (strcmp(topic, "esp/servo_control") == 0) {
+    if (message == "ON") {
+        setServoState(180);  // ← Use your existing function
+        Serial.println("Callback - Servo turned ON");
+    } else if (message == "OFF") {
+        setServoState(0);    // ← Use your existing function
+        Serial.println("Callback - Servo turned OFF");
+    }
+    
+    // IMMEDIATELY publish the new servo state
+    publishServoMotorState();
+    Serial.println("Callback - Published servo state immediately");
+}
+  // ... rest of your callback code
 }
 
 void reconnectMQTT() {
