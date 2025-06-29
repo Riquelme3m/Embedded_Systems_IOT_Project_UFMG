@@ -9,7 +9,7 @@ void setup() {
   Serial.begin(115200);
   Serial.println("ESP32 Real-Time Automation System Starting...");
   
-  // Initialize hardware (sensors, actuators)
+  // Initialize hardware (sensors, actuators ...)
   initializeHardware();
   Serial.println("Hardware initialized");
   
