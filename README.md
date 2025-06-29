@@ -112,10 +112,10 @@ platformio.ini
 ## 📸 Screenshots
 
 ### Architecture
-*Insert architecture diagram here*
+![System Architecture](architecture.png)
 
 ### Node-RED Dashboard
-*Insert dashboard screenshot here*
+![Dashboard Screenshot](dashboard.png)
 
 ---
 
